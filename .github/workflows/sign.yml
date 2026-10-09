@@ -1,0 +1,179 @@
+name: sign
+
+# The private source repository's release.yml builds both layers and creates
+# the release here (with its RELEASES_TOKEN) carrying the app tarball, the
+# shell's updater bundle + .sig and release.toml. This workflow is the signer:
+# it signs that release's packslip keylessly as github.com/jgeschwendt/bifrost-releases
+# and attaches it, then re-signs the release list and the updater's
+# latest.json on main. The list also refreshes weekly (it expires after 30
+# days), when a withdrawal merges, and by hand. One workflow file signs
+# everything, so consumers see one signer, and it is the project's own repo.
+
+on:
+  release:
+    types: [published]
+  push:
+    branches: [main]
+    paths: [".github/packslip/**"]
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Sign this release's packslip (v1.2.3) before the list; empty re-signs the list only"
+        required: false
+        default: ""
+
+permissions: {}
+
+jobs:
+  sign:
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && inputs.tag != '')
+    runs-on: ubuntu-latest
+    concurrency: packslip-sign-${{ github.event.release.tag_name || inputs.tag }}
+    permissions:
+      contents: write # Download the assets; upload the bundle to the release.
+      id-token: write # Sign the packslip with this workflow's identity.
+    env:
+      TAG: ${{ github.event.release.tag_name || inputs.tag }}
+    steps:
+      - uses: actions/checkout@v5
+
+      # release.toml paths are dist/<name>, as the source repo's release.yml
+      # wrote them, so the assets land there and the manifest at the root.
+      - name: Download the release's assets
+        id: assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          v=${TAG#v}
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist \
+            --pattern "bifrost-app-$v-macos-aarch64.tar.gz" --pattern Bridge.app.tar.gz
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern release.toml --clobber
+          got=$(sed -nE 's/^version = "([^"]+)"$/\1/p' release.toml)
+          [ "$got" = "$v" ] || { echo "::error::release.toml says $got, the tag says $v"; exit 1; }
+          cat release.toml
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "commit=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)" >> "$GITHUB_OUTPUT"
+
+      - uses: jdx/packslip@v1
+        with:
+          project: github.com/jgeschwendt/bifrost-releases
+          version: ${{ steps.assets.outputs.version }}
+          tag: ${{ env.TAG }}
+          commit: ${{ steps.assets.outputs.commit }}
+          manifest: release.toml
+          artifacts: dist/*.tar.gz
+          # This job signs files the private repo built; an attestation made
+          # here would name this workflow as their builder, and GitHub's need
+          # Enterprise Cloud in the private repo that did build them. Off from
+          # the first release: consumers refuse a release that drops
+          # provenance its predecessor carried, never one that adds it.
+          attest: false
+
+  list:
+    needs: sign
+    if: always() && (needs.sign.result == 'success' || needs.sign.result == 'skipped')
+    runs-on: ubuntu-latest
+    concurrency: packslip-list
+    permissions:
+      contents: write # Commit .well-known/ to main.
+      id-token: write # Sign the list with this workflow's identity.
+    steps:
+      # Main, not the tag: withdrawals merged since the tag still count, and
+      # the list is committed there.
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+
+      - name: Read the withdrawals
+        id: withdrawn
+        run: |
+          set -euo pipefail
+          file=.github/packslip/yanked
+          [ -f "$file" ] || { echo "::error::$file is missing"; exit 1; }
+          delimiter="packslip_$(openssl rand -hex 16)"
+          {
+            echo "yank<<$delimiter"
+            grep -Ev '^[[:space:]]*(#|$)' "$file" || [ $? -eq 1 ]
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the published bundles
+        id: bundles
+        env:
+          GH_TOKEN: ${{ github.token }}
+          YANK: ${{ steps.withdrawn.outputs.yank }}
+        run: |
+          set -euo pipefail
+          listed=()
+          for tag in $(gh release list --repo "$GITHUB_REPOSITORY" --exclude-drafts --limit 1000 --json tagName --jq '.[].tagName'); do
+            if gh release download "$tag" --repo "$GITHUB_REPOSITORY" --pattern packslip.sigstore.json --dir "$RUNNER_TEMP/lists/$tag"; then
+              listed+=("$tag")
+            else
+              echo "::warning::$tag has no packslip.sigstore.json; left out of the list"
+            fi
+          done
+          # the recommendation: the highest release neither withdrawn nor a prerelease
+          latest=$(printf '%s\n' "${listed[@]}" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' |
+            grep -vxF -f <(cut -d= -f1 <<<"$YANK" | grep .) | sed 's/^v//' | sort -V | tail -n 1 || true)
+          {
+            echo "latest=$latest"
+            echo "count=${#listed[@]}"
+            echo "sequence=$(date +%s)"
+          } >> "$GITHUB_OUTPUT"
+
+      # A list cannot be empty: before the first release there is none.
+      - uses: jdx/packslip/releases@v1
+        if: steps.bundles.outputs.count != '0'
+        with:
+          project: github.com/jgeschwendt/bifrost-releases
+          dir: ${{ runner.temp }}/lists
+          url-base: https://github.com/${{ github.repository }}/releases/download
+          sequence: ${{ steps.bundles.outputs.sequence }}
+          valid-for: 30d
+          latest: ${{ steps.bundles.outputs.latest }}
+          yank: ${{ steps.withdrawn.outputs.yank }}
+          out: .well-known/packslip.json
+
+      # The shell's own update (tauri-plugin-updater) follows the list's
+      # recommendation, so a withdrawal pulls it too. The url is the public
+      # release download; the shell sends no credentials.
+      - name: Write the updater's latest.json
+        if: steps.bundles.outputs.latest != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.bundles.outputs.latest }}
+        run: |
+          set -euo pipefail
+          release=$(gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json assets,publishedAt)
+          if ! jq -e '.assets[] | select(.name == "Bridge.app.tar.gz")' <<<"$release" >/dev/null; then
+            echo "::warning::v$VERSION has no Bridge.app.tar.gz; latest.json left as it is"
+            exit 0
+          fi
+          gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" --pattern Bridge.app.tar.gz.sig --dir "$RUNNER_TEMP/updater"
+          jq -n \
+            --arg version "$VERSION" \
+            --arg pub_date "$(jq -r .publishedAt <<<"$release")" \
+            --arg url "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/Bridge.app.tar.gz" \
+            --rawfile signature "$RUNNER_TEMP/updater/Bridge.app.tar.gz.sig" \
+            '{version: $version, pub_date: $pub_date, platforms: {"darwin-aarch64": {signature: ($signature | gsub("\\s"; "")), url: $url}}}' \
+            > .well-known/latest.json
+          cat .well-known/latest.json
+
+      - name: Commit .well-known
+        if: steps.bundles.outputs.count != '0'
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .well-known
+          git diff --cached --quiet && exit 0
+          git commit -m "ci(sign): re-sign the release list and latest.json"
+          for attempt in 1 2 3; do
+            git pull --rebase origin main && git push origin HEAD:main && exit 0
+            echo "::warning::push attempt $attempt lost a race; retrying"
+            sleep $((attempt * 5))
+          done
+          exit 1

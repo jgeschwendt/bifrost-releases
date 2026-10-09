@@ -1,0 +1,4 @@
+# Withdrawn releases, one TAG=REASON line each (v0.1.2=crashes on launch).
+# sign.yml's list job reads this on every run: a withdrawal lives exactly as
+# long as its line, and deleting this file fails the list job rather than
+# quietly un-withdrawing everything.
