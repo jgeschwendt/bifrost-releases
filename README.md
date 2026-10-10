@@ -6,13 +6,20 @@ download.
 
 ## Install on a Mac (Apple silicon, macOS 15+)
 
-1. Download `Bridge.app.tar.gz` from the
-   [latest release](https://github.com/jgeschwendt/bifrost-releases/releases/latest).
-2. Untar it (double-click, or `tar -xzf Bridge.app.tar.gz`) and drag
-   `Bridge.app` to Applications.
-3. Open it. It is not notarized, so macOS blocks the first launch of a
-   downloaded copy: System Settings → Privacy & Security → Open Anyway (or
-   `xattr -dr com.apple.quarantine /Applications/Bridge.app` first).
+```sh
+curl -fsSL https://raw.githubusercontent.com/jgeschwendt/bifrost-releases/main/install.sh | sh
+```
+
+[`install.sh`](install.sh) downloads `Bridge.app.tar.gz` from the latest
+release, puts `Bridge.app` in Applications (quitting and replacing a copy
+that is already there) and opens it. A curl download carries no quarantine
+flag, so the ad-hoc-signed app opens without the "Open Anyway" step a browser
+download needs. `BRIDGE_INSTALL_DIR` overrides `/Applications`.
+
+By hand instead: download `Bridge.app.tar.gz` from the
+[latest release](https://github.com/jgeschwendt/bifrost-releases/releases/latest),
+untar it, drag `Bridge.app` to Applications and open it (System Settings →
+Privacy & Security → Open Anyway on the first launch).
 
 The shell then installs the Erlang runtime and the app layer itself and keeps
 both, and itself, up to date.
