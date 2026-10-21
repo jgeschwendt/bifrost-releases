@@ -1,10 +1,10 @@
 {
-  "version": "2026.10.10",
-  "pub_date": "2026-10-10T12:42:17Z",
+  "version": "2026.10.21",
+  "pub_date": "2026-10-21T17:39:57Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTZFZNNlVzUkhUakpwS1JuWDByV1BUQmhza1JleUJhOE0rMmtGU0ZyZXZNQ1pzVTdCcDNEM1dSdnhVQW5TTk1mam1wV1dpeUxXdXJEQjVoTkZwTzl0VEFTZWUyd0daMkFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkxNjM2MTM0CWZpbGU6QnJpZGdlLmFwcC50YXIuZ3oJdmVyc2lvbjoyMDI2LjEwLjEwCklKaXB0YlhtQmJDWkQyNDlTTi9nU3JLQTErVk1tTjMvZ1pZYzFPcjVpWEhPUjJZL092TWxQRURZUnVNb1R0S0xta2k3OC9GUGlqV2RmNE1JZDFhU0RRPT0K",
-      "url": "https://github.com/jgeschwendt/bifrost-releases/releases/download/v2026.10.10/Bridge.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTZFZNNlVzUkhUakhMQjdaQ0hZZTk5TVU2cU5MelV4UUovRUs0bHVDT3N3TTh3dzBXc29aZ2RWZnRUZHMxMDJZZXJ5QW9qZ21kek56UXBjRkIwUXRWdGM1VGhjaWVjK0EwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkyNjA0MzkyCWZpbGU6Qmlmcm9zdC5hcHAudGFyLmd6CXZlcnNpb246MjAyNi4xMC4yMQpsVHVLQ0xSR0NwbHJrNzBvZnZNVUpGTmY5c0pwdlRmVytGS2grUHk4Sk1YYmtKRU1yS1ZMWHZCUzlhSjJQU0s1K2pZYTA0M2xMSEl0WEkveU1LYW5DUT09Cg==",
+      "url": "https://github.com/jgeschwendt/bifrost-releases/releases/download/v2026.10.21/Bridge.app.tar.gz"
     }
   }
 }
