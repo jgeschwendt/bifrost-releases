@@ -1,6 +1,6 @@
 # bifrost-releases
 
-Built releases of Bifrost, the Bridge app. The source repository is private;
+Built releases of Bifrost. The source repository is private;
 this one holds only what ships and signs it. Nothing here needs a token to
 download.
 
@@ -10,15 +10,15 @@ download.
 curl -fsSL https://raw.githubusercontent.com/jgeschwendt/bifrost-releases/main/install.sh | sh
 ```
 
-[`install.sh`](install.sh) downloads `Bridge.app.tar.gz` from the latest
-release, puts `Bridge.app` in Applications (quitting and replacing a copy
+[`install.sh`](install.sh) downloads `Bifrost.app.tar.gz` from the latest
+release, puts `Bifrost.app` in Applications (quitting and replacing a copy
 that is already there) and opens it. A curl download carries no quarantine
 flag, so the ad-hoc-signed app opens without the "Open Anyway" step a browser
-download needs. `BRIDGE_INSTALL_DIR` overrides `/Applications`.
+download needs. `BIFROST_INSTALL_DIR` overrides `/Applications`.
 
-By hand instead: download `Bridge.app.tar.gz` from the
+By hand instead: download `Bifrost.app.tar.gz` from the
 [latest release](https://github.com/jgeschwendt/bifrost-releases/releases/latest),
-untar it, drag `Bridge.app` to Applications and open it (System Settings →
+untar it, drag `Bifrost.app` to Applications and open it (System Settings →
 Privacy & Security → Open Anyway on the first launch).
 
 The shell then installs the Erlang runtime and the app layer itself and keeps
@@ -29,12 +29,13 @@ both, and itself, up to date.
 | asset | what |
 | --- | --- |
 | `bifrost-app-<v>-macos-aarch64.tar.gz` | the app layer, a `mix release` without ERTS |
-| `Bridge.app.tar.gz` | the macOS shell, a tauri-plugin-updater bundle |
-| `Bridge.app.tar.gz.sig` | its minisign signature |
+| `Bifrost.app.tar.gz` | the macOS shell, a tauri-plugin-updater bundle |
+| `Bifrost.app.tar.gz.sig` | its minisign signature |
+| `Bridge.app.tar.gz` + `.sig` | the same bytes under the shell's old name, during the transition below |
 | `release.toml` | the [packslip](https://packslip.dev/) manifest |
 | `packslip.sigstore.json` | the signed manifest of both tarballs |
 
-The private repository's release workflow builds the first four and creates
+The private repository's release workflow builds all but the packslip and creates
 the release here. [`sign.yml`](.github/workflows/sign.yml) then signs the
 packslip keylessly as `github.com/jgeschwendt/bifrost-releases` (the project
 is its own signer; the shell pins this repository's ID, `1412423036`) and
@@ -44,12 +45,28 @@ re-signs, on `main`:
   from raw.githubusercontent.com), valid 30 days, re-signed after every
   release, weekly, on a withdrawal and on `workflow_dispatch`.
 - `.well-known/latest.json` — the shell's updater manifest, pointing at
-  `https://github.com/jgeschwendt/bifrost-releases/releases/download/v<v>/Bridge.app.tar.gz`.
+  `https://github.com/jgeschwendt/bifrost-releases/releases/download/v<v>/Bifrost.app.tar.gz`
+  (`Bridge.app.tar.gz` while a release still carries that copy).
 
 `workflow_dispatch` with `tag: v<v>` re-signs that release's packslip first;
 without a tag it re-signs the list only. Keep immutable releases off: the
 packslip is uploaded to a release that is already published. Never delete
 and recreate this repository: the shell's pin names its ID.
+
+## The Bridge → Bifrost transition (2026-10-21)
+
+The shell was Bridge until v2026.10.10 and is Bifrost from v2026.10.21. A
+Bridge shell updates only from `Bridge.app.tar.gz`, so releases carry the
+same signed bundle under that name once more, and `latest.json` announces it
+while they do (Bifrost shells accept both names). The old copy keeps its
+`Bridge.app` folder name in place; a fresh install is `Bifrost.app`.
+
+**Drop the Bridge-named asset once every installed shell is on ≥ 2026.10.21**
+(`plutil -extract CFBundleShortVersionString raw <app>/Contents/Info.plist`):
+the source repository's release workflow stops
+uploading it, and `sign.yml` then announces `Bifrost.app.tar.gz` by itself. A
+Bridge shell left behind after that never updates again; reinstall it with
+`install.sh`.
 
 ## Withdraw a release
 

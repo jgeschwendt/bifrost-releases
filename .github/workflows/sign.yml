@@ -48,11 +48,16 @@ jobs:
         run: |
           set -euo pipefail
           v=${TAG#v}
-          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist \
-            --pattern "bifrost-app-$v-macos-aarch64.tar.gz" --pattern Bridge.app.tar.gz
           gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern release.toml --clobber
           got=$(sed -nE 's/^version = "([^"]+)"$/\1/p' release.toml)
           [ "$got" = "$v" ] || { echo "::error::release.toml says $got, the tag says $v"; exit 1; }
+          # exactly the tarballs the manifest names: the shell bundle is
+          # Bifrost.app.tar.gz from v2026.10.21 (Bridge.app.tar.gz before), and
+          # the Bridge-named copy a transition release also carries is not signed
+          patterns=()
+          while read -r name; do patterns+=(--pattern "$name"); done < <(sed -nE 's#^path = "dist/([^"/]+)"$#\1#p' release.toml)
+          [ ${#patterns[@]} -gt 0 ] || { echo "::error::release.toml names no dist/ artifact"; exit 1; }
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --dir dist "${patterns[@]}"
           cat release.toml
           echo "version=$v" >> "$GITHUB_OUTPUT"
           echo "commit=$(gh api "repos/$GITHUB_REPOSITORY/commits/$TAG" --jq .sha)" >> "$GITHUB_OUTPUT"
@@ -148,16 +153,33 @@ jobs:
         run: |
           set -euo pipefail
           release=$(gh release view "v$VERSION" --repo "$GITHUB_REPOSITORY" --json assets,publishedAt)
-          if ! jq -e '.assets[] | select(.name == "Bridge.app.tar.gz")' <<<"$release" >/dev/null; then
-            echo "::warning::v$VERSION has no Bridge.app.tar.gz; latest.json left as it is"
+          # Shells before v2026.10.21 fetch only Bridge.app.tar.gz, later ones
+          # Bifrost.app.tar.gz or, until the transition ends, Bridge.app.tar.gz:
+          # while a release carries the Bridge-named copy, announce it so the
+          # old shells update too. It must be the very bundle, .sig included.
+          names=$(jq -r '.assets[].name' <<<"$release")
+          bundle=
+          for name in Bridge.app.tar.gz Bifrost.app.tar.gz; do
+            grep -qxF "$name" <<<"$names" && grep -qxF "$name.sig" <<<"$names" && { bundle=$name; break; }
+          done
+          if [ -z "$bundle" ]; then
+            echo "::warning::v$VERSION has no shell bundle with its .sig; latest.json left as it is"
             exit 0
           fi
-          gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" --pattern Bridge.app.tar.gz.sig --dir "$RUNNER_TEMP/updater"
+          dir=$RUNNER_TEMP/updater
+          gh release download "v$VERSION" --repo "$GITHUB_REPOSITORY" --dir "$dir" \
+            --pattern 'B*.app.tar.gz' --pattern 'B*.app.tar.gz.sig'
+          if [ "$bundle" = Bridge.app.tar.gz ] && [ -f "$dir/Bifrost.app.tar.gz" ]; then
+            for ext in "" .sig; do
+              cmp "$dir/Bridge.app.tar.gz$ext" "$dir/Bifrost.app.tar.gz$ext" ||
+                { echo "::error::Bridge.app.tar.gz$ext is not the very bytes of Bifrost.app.tar.gz$ext"; exit 1; }
+            done
+          fi
           jq -n \
             --arg version "$VERSION" \
             --arg pub_date "$(jq -r .publishedAt <<<"$release")" \
-            --arg url "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/Bridge.app.tar.gz" \
-            --rawfile signature "$RUNNER_TEMP/updater/Bridge.app.tar.gz.sig" \
+            --arg url "https://github.com/$GITHUB_REPOSITORY/releases/download/v$VERSION/$bundle" \
+            --rawfile signature "$dir/$bundle.sig" \
             '{version: $version, pub_date: $pub_date, platforms: {"darwin-aarch64": {signature: ($signature | gsub("\\s"; "")), url: $url}}}' \
             > .well-known/latest.json
           cat .well-known/latest.json
