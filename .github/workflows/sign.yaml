@@ -1,7 +1,7 @@
 name: sign
 
-# The private source repository's release.yml builds both layers and creates
-# the release here (with its RELEASES_TOKEN) carrying the app tarball, the
+# The private source repository's `mise run release` builds both layers on the
+# owner's Mac and creates the release here carrying the app tarball, the
 # shell's updater bundle + .sig and release.toml. This workflow is the signer:
 # it signs that release's packslip keylessly as github.com/jgeschwendt/bifrost-releases
 # and attaches it, then re-signs the release list and the updater's

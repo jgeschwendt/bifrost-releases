@@ -35,8 +35,8 @@ both, and itself, up to date.
 | `release.toml` | the [packslip](https://packslip.dev/) manifest |
 | `packslip.sigstore.json` | the signed manifest of both tarballs |
 
-The private repository's release workflow builds all but the packslip and creates
-the release here. [`sign.yml`](.github/workflows/sign.yml) then signs the
+The private repository's `mise run release` builds all but the packslip on the
+owner's Mac and creates the release here. [`sign.yaml`](.github/workflows/sign.yaml) then signs the
 packslip keylessly as `github.com/jgeschwendt/bifrost-releases` (the project
 is its own signer; the shell pins this repository's ID, `1412423036`) and
 re-signs, on `main`:
@@ -63,8 +63,8 @@ while they do (Bifrost shells accept both names). The old copy keeps its
 
 **Drop the Bridge-named asset once every installed shell is on ≥ 2026.10.21**
 (`plutil -extract CFBundleShortVersionString raw <app>/Contents/Info.plist`):
-the source repository's release workflow stops
-uploading it, and `sign.yml` then announces `Bifrost.app.tar.gz` by itself. A
+the source repository's release stops
+uploading it, and `sign.yaml` then announces `Bifrost.app.tar.gz` by itself. A
 Bridge shell left behind after that never updates again; reinstall it with
 `install.sh`.
 
