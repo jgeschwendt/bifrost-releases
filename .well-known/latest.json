@@ -1,10 +1,10 @@
 {
-  "version": "2026.11.4",
-  "pub_date": "2026-11-04T11:27:52Z",
+  "version": "2026.11.20",
+  "pub_date": "2026-11-20T14:48:55Z",
   "platforms": {
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTTDVPZERud0FNOUtiNXgwVmg3bEhCRklkT1MwTXdGVmdMeEhHbXFzZmZDRDltc2pZVDFad0ZlcmgwMENiTktWamRrajVmajR6dVZTVDNVMzA5aUU4Y3lSSTdkZG5sNUFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzkzNzkxNjYzCWZpbGU6Qmlmcm9zdC5hcHAudGFyLmd6CXZlcnNpb246MjAyNi4xMS40CktNeloreGRtc1JXTEp1dlRYbzhVM3dBVGdRVGJjKzNIanl5cWFKNXNEdGdRS2thaHhTbHk0WllKUUdKb0lwZGp3N3p1dEVLTy91QjBFWkFuUVVhSkF3PT0K",
-      "url": "https://github.com/jgeschwendt/bifrost-releases/releases/download/v2026.11.4/Bifrost.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTTDVPZERud0FNOUYxamJ5RUFlQlZJUTd3b2d1aWd2N3hzSUZ1NXcrd3FFRXRhWmx4VFUvay8zcGRHNUI0WDJVUGJiU2lpK2NsKzMyeW9Pdkx5VU5tYzNEaWJTN1RqWndBPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzk1MTg2MTAzCWZpbGU6Qmlmcm9zdC5hcHAudGFyLmd6CXZlcnNpb246MjAyNi4xMS4yMAprTWcrTXFia3llemkrWHlvNVF1dXJYTkpOMVltNEQ4UC8zWm9uOTFMOVVOQnQ5WHM0Lzlsc0lZZ3RYSko5VHkvdnhESkpETHpyWlJ3d2JDbW4reDJCQT09Cg==",
+      "url": "https://github.com/jgeschwendt/bifrost-releases/releases/download/v2026.11.20/Bifrost.app.tar.gz"
     }
   }
 }
